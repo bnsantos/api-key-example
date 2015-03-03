@@ -1,9 +1,9 @@
 var express = require('express')
   , passport = require('passport')
-  , LocalStrategy = require('passport-localapikey').Strategy
+  , BearerStrategy = require('passport-http-bearer').Strategy
 
 var users = [
-  {id:1, username:'John Doe', apiKey:'asd'}
+  {id:1, username:'John Doe', token:'asdfgh'}
 ]
 
 function findById(id, fn) {
@@ -15,46 +15,25 @@ function findById(id, fn) {
   }
 }
 
-function findByApiKey(apikey, fn) {
+function findByToken(token, fn) {
   for (var i = 0, len = users.length; i < len; i++) {
     var user = users[i];
-    if (user.apikey === apikey) {
+    if (user.token === token) {
       return fn(null, user);
     }
   }
   return fn(null, null);
 }
 
-
-passport.serializeUser(function(user, done){
-  console.log('aki')
-  done(null, user.id)
-})
-
-passport.deserializeUser(function(id, done){
-  console.log('aki2')
-  findById(id, function(err, user){
-    done(err, user)
-  })
-})
-
-passport.use(new LocalStrategy( function(apiKey, done){
+passport.use(new BearerStrategy({}, function(token, done){
   process.nextTick(function(){
-    console.log('localstrategy:'+apiKey)
-    findByApiKey(apiKey, function(err, user){
-      if(err){return done(err)}
-      if(!user){return done(null, false, {message: 'Unknown apiKey: '+apiKey})}
+    findByToken(token, function(err, user){
+      if(err){ return done(err) }
+      if(!user){ return done(null, false) }
       return done(null, user)
     })
   })
 }))
-
-function isAuth(req, res, next){
-  console.log('Auth:'+req.isAuthenticated())
-  console.log('apikey:'+req.headers['apikey'])
-  if(req.isAuthenticated()){return next()}
-  res.redirect('/')
-}
 
 var app = express()
 app.use(passport.initialize())
@@ -74,25 +53,8 @@ app.get('/noauth', function(req, res){
 
 /*
  * Get authentication required
+ *  http://localhost:3000/login?access_token=asdfgh
  */
-app.get('/auth', isAuth, function(req, res){
-  res.send({message: 'Hello world Auth', auth: ''})
-})
-
-/*
- * Get authentication required
- */
-app.post('/auth', isAuth, function(req, res){
-  res.send({message: 'Hello world Auth', auth: ''})
-})
-
-
-app.get('/', function(req, res){
-  res.send('You need to be auth')
-})
-
-app.post('/api/authenticate',
-  passport.authenticate('localapikey', { failureRedirect: '/api/unauthorized'}),
-  function(req, res) {
-     res.json({ message: "Authenticated" })
+app.get('/auth', passport.authenticate('bearer', {session:false}), function(req, res){
+  res.send({message: 'Hello world '+ req.user.username, auth: 'you\'re logged'})
 })
