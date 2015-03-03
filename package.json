@@ -14,5 +14,10 @@
   "license": "BSD-2-Clause",
   "bugs": {
     "url": "https://github.com/bnsantos/api-key-example/issues"
+  },
+  "dependencies": {
+    "express": "~4.12.1",
+    "passport-localapikey": "0.0.3",
+    "passport": "~0.2.1"
   }
 }
